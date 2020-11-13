@@ -8,6 +8,7 @@ from core.views import ConsultaViewSet, DisponibilidadeViewSet, PacienteViewSet,
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
 router.register(r'paciente', PacienteViewSet)
+router.register(r'pacientes', PacienteViewSet)
 router.register(r'consulta', ConsultaViewSet)
 router.register(r'disponibilidade', DisponibilidadeViewSet)
 
