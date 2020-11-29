@@ -29,6 +29,10 @@ class AgendaAdmin(admin.ModelAdmin):
     def cancelar_agendamentos(modeladmin, request, queryset):
         for q in queryset:
             q.cancelar_agendamento()
+
+    def solicitar_confirmação(modeladmin, request, queryset):
+        for q in queryset:
+            q.solicitar_confirmação()
     cancelar_agendamentos.short_description = "Cancelar agendamentos selecionados"
     list_display = [
         'profissional',
@@ -39,7 +43,7 @@ class AgendaAdmin(admin.ModelAdmin):
         'auto_notified',
         linkify(field_name='prontuário')
     ]
-    actions = [cancelar_agendamentos]
+    actions = [cancelar_agendamentos, solicitar_confirmação]
 
 
 class ConsultaAdmin(admin.ModelAdmin):
