@@ -57,7 +57,7 @@ class Agenda(models.Model):
     is_disponível = models.BooleanField(default=True)
     prontuário = models.ForeignKey(
         'Prontuário', blank=True, null=True, on_delete=models.CASCADE)
-    hora_confirmação = models.DateTimeField(editable=False)
+    hora_confirmação = models.DateTimeField(editable=False, null=True)
     confirmado = models.BooleanField(default=False)
 
     auto_notified = models.BooleanField(default=False, editable=False)
@@ -90,6 +90,7 @@ class Agenda(models.Model):
 
     def confirmar_agendamento(self):
         self.confirmado = True
+        self.hora_confirmação = timezone.now()
         self.save()
 
     def cancelar_agendamento(self):
