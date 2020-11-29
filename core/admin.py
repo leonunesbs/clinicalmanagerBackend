@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
+from django.contrib import messages
 from .models import *
 
 
@@ -30,9 +31,12 @@ class AgendaAdmin(admin.ModelAdmin):
         for q in queryset:
             q.cancelar_agendamento()
 
-    def solicitar_confirmação(modeladmin, request, queryset):
+    def solicitar_confirmações(modeladmin, request, queryset):
         for q in queryset:
             q.solicitar_confirmação()
+            messages.add_message(request, messages.INFO,
+                                 q)
+
     cancelar_agendamentos.short_description = "Cancelar agendamentos selecionados"
     list_display = [
         'profissional',
@@ -43,7 +47,7 @@ class AgendaAdmin(admin.ModelAdmin):
         'auto_notified',
         linkify(field_name='prontuário')
     ]
-    actions = [cancelar_agendamentos, solicitar_confirmação]
+    actions = [cancelar_agendamentos, solicitar_confirmações]
 
 
 class ConsultaAdmin(admin.ModelAdmin):

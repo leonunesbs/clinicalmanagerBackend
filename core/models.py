@@ -100,11 +100,11 @@ class Agenda(models.Model):
 
             return f'{self.horário.strftime("%d/%m/%Y às %Hh%M")}'
 
-        self.prontuário.paciente.notify(
-            f'''
-            Olá {self.prontuário.paciente.nome.split()[0]}!\n
-            Voçê deseja CONFIRMAR a sua consulta que está marcada para {get_horário_display()} - {self.local_de_atendimento}?
-            ''')
+        if self.prontuário:
+            self.prontuário.paciente.notify(
+                f'Olá {self.prontuário.paciente.nome.split()[0]}!\nVocê deseja CONFIRMAR a sua consulta que está marcada para {get_horário_display()} - {self.local_de_atendimento}?')
+
+        return 'ok'
 
     def confirmar_agendamento(self):
         self.confirmado = True

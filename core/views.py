@@ -82,5 +82,7 @@ def iniciar_consulta(request):
 @api_view(['POST'])
 def testando(request):
     if request.data['Body'].lower() in ['sim', 's', 'yes', 'ok', 'confirmar']:
-        Paciente.objects.get(nome='LEONARDO NUNES BEZERRA SOUZA').notify(
-            f'Sua consulta foi confirmada.')
+        paciente = Paciente.objects.get(nome='LEONARDO NUNES BEZERRA SOUZA')
+        paciente.notify(f'Sua consulta foi confirmada.')
+        agenda = Agenda.objects.get(prontuário__paciente=paciente)
+        agenda.confirmar_agendamento()
