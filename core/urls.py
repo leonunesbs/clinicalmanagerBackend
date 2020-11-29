@@ -21,5 +21,5 @@ urlpatterns = [
 
     path('agendamento/', agendamento, name='agendamento'),
     path('iniciar/', iniciar_consulta, name='iniciar_consulta'),
-    path('testando/', testando, name='testando'),
+    path('fred/', talk_to_fred, name='fred'),
 ]

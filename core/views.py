@@ -81,8 +81,24 @@ def iniciar_consulta(request):
 
 @api_view(['POST'])
 def testando(request):
+
     if request.data['Body'].lower() in ['sim', 's', 'yes', 'ok', 'confirmar']:
         paciente = Paciente.objects.get(nome='LEONARDO NUNES BEZERRA SOUZA')
         paciente.notify(f'Sua consulta foi confirmada.')
         agenda = Agenda.objects.get(prontuário__paciente=paciente)
         agenda.confirmar_agendamento()
+
+
+@api_view(['POST'])
+def talk_to_fred(request):
+    from chatterbot import ChatBot
+
+    bot = ChatBot('Fred')
+    pergunta = request.data['Body']
+
+    resposta = bot.get_response(pergunta)
+
+    if float(resposta.confidence) > 0.5:
+        return Response({'Fred': resposta})
+    else:
+        return Response({'Fred': 'Eu não te entendi. :('})
