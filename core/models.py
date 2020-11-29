@@ -18,16 +18,21 @@ class Paciente(models.Model):
 
     def notify(self, msg):
         from twilio.rest import Client
+        import re
 
-        account_sid = settings.TWILIO_ACC_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
+        account_sid = 'AC34e352b4d9303e072239451a5de73ad6'
+        auth_token = 'bef3ad4088bdceb71d525121389dda7a'
         client = Client(account_sid, auth_token)
 
-        formated_wpp = ''.join([i for i in self.telefone if not i.isdigit()])
+        clean_telefone = re.compile(
+            r'[^\d.]+').sub('', self.telefone)
+
+        clean_telefone = clean_telefone.replace(clean_telefone[2], '')
+
         client.messages.create(
             from_='whatsapp:+14155238886',
             body=msg,
-            to=f'whatsapp:+55{formated_wpp}'
+            to=f'whatsapp:+55{clean_telefone}'
         )
 
     def __str__(self):
