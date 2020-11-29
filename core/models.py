@@ -91,7 +91,20 @@ class Agenda(models.Model):
             f'Olá {self.prontuário.paciente.nome.split()[0]}!\nSua consulta está marcada para {get_horário_display()} - {self.local_de_atendimento}.')
 
     def solicitar_confirmação(self):
-        pass
+        def get_horário_display():
+            today = timezone.now()
+            if self.horário.day == today.day:
+                return f'HOJE, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+            if self.horário.day == today.day + 1:
+                return f'AMANHÃ, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+
+            return f'{self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+
+        self.prontuário.paciente.notify(
+            f'''
+            Olá {self.prontuário.paciente.nome.split()[0]}!\n
+            Voçê deseja CONFIRMAR a sua consulta que está marcada para {get_horário_display()} - {self.local_de_atendimento}?
+            ''')
 
     def confirmar_agendamento(self):
         self.confirmado = True
