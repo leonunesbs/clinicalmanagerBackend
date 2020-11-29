@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from core.models import Consulta, Disponibilidade, Paciente
+from core.models import Consulta, Agenda, Paciente, Prontuário, Profissional
 
 
 class PacienteSerializer(serializers.ModelSerializer):
@@ -11,13 +11,33 @@ class PacienteSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ProfissionalSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Profissional
+        fields = '__all__'
+
+
 class ConsultaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Consulta
         fields = '__all__'
 
 
-class DisponibilidadeSerializer(serializers.ModelSerializer):
+class ProntuárioSerializer(serializers.ModelSerializer):
+    paciente = serializers.CharField()
+    data_de_nascimento = serializers.DateField(
+        source='get_data_de_nascimento')
+
     class Meta:
-        model = Disponibilidade
+        model = Prontuário
+        fields = ['id', 'paciente', 'data_de_nascimento']
+
+
+class AgendaSerializer(serializers.ModelSerializer):
+    profissional = ProfissionalSerializer()
+    prontuário = ProntuárioSerializer()
+
+    class Meta:
+        model = Agenda
         fields = '__all__'

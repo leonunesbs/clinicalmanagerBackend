@@ -25,17 +25,42 @@ def linkify(field_name):
     return _linkify
 
 
-class DisponibilidadeAdmin(admin.ModelAdmin):
+class AgendaAdmin(admin.ModelAdmin):
+    def cancelar_agendamentos(modeladmin, request, queryset):
+        for q in queryset:
+            q.cancelar_agendamento()
+    cancelar_agendamentos.short_description = "Cancelar agendamentos selecionados"
     list_display = [
         'profissional',
         'horário',
         'is_disponível',
-        linkify(field_name='consulta')
+        'hora_confirmação',
+        'confirmado',
+        'auto_notified',
+        linkify(field_name='prontuário')
+    ]
+    actions = [cancelar_agendamentos]
+
+
+class ConsultaAdmin(admin.ModelAdmin):
+    list_display = [
+        'get_paciente',
+        'profissional',
+        'início',
+        'duração_consulta',
+        'has_observações'
+    ]
+
+
+class ProntuárioAdmin(admin.ModelAdmin):
+    list_display = [
+        'paciente'
     ]
 
 
 # Register your models here.
+admin.site.register(Agenda, AgendaAdmin)
+admin.site.register(Consulta, ConsultaAdmin)
 admin.site.register(Paciente)
 admin.site.register(Profissional)
-admin.site.register(Disponibilidade, DisponibilidadeAdmin)
-admin.site.register(Consulta)
+admin.site.register(Prontuário, ProntuárioAdmin)

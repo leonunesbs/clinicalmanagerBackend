@@ -7,8 +7,8 @@ from rest_framework.permissions import IsAdminUser
 from rest_framework.reverse import reverse
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST
 
-from core.models import Consulta, Disponibilidade, Paciente
-from core.serializers import ConsultaSerializer, PacienteSerializer, DisponibilidadeSerializer
+from core.models import Consulta, Agenda, Paciente
+from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer
 
 
 class PacienteViewSet(viewsets.ModelViewSet):
@@ -22,9 +22,9 @@ class ConsultaViewSet(viewsets.ModelViewSet):
     serializer_class = ConsultaSerializer
 
 
-class DisponibilidadeViewSet(viewsets.ModelViewSet):
-    queryset = Disponibilidade.objects.all()
-    serializer_class = DisponibilidadeSerializer
+class AgendaViewSet(viewsets.ModelViewSet):
+    queryset = Agenda.objects.all()
+    serializer_class = AgendaSerializer
 
 
 @api_view(['POST'])
@@ -49,7 +49,7 @@ def agendamento(request):
             data[key] = "Este campo é obrigatório."
 
     try:
-        disponibilidade = Disponibilidade.objects.get(
+        disponibilidade = Agenda.objects.get(
             pk=data['disponibilidade'])
         paciente = Paciente.objects.get(
             pk=data['paciente'])
@@ -72,3 +72,14 @@ def agendamento(request):
     if created:
         return Response(serializer.data, status=HTTP_201_CREATED)
     return Response(serializer.data, status=HTTP_200_OK)
+
+
+@api_view(['GET'])
+def iniciar_consulta(request):
+    Consulta.objects.get(id=1).iniciar()
+
+
+@api_view(['POST'])
+def testando(request):
+    Paciente.objects.get(nome='LEONARDO NUNES BEZERRA SOUZA').notify(
+        f'{request.data}')

@@ -22,9 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config(
+    'SECRET_KEY') or '!xxcs)2nt=$qea&=tutdnv$-%tv)o3y_rt3$ov@i!691ix%v@j'
 
-DEBUG = config('DEBUG', default=False, cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -127,6 +128,10 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+
+TWILIO_ACC_SID = 'AC34e352b4d9303e072239451a5de73ad6'
+TWILIO_AUTH_TOKEN = '854b48d12479be59298930b584b677cc'
 
 
 django_heroku.settings(locals())
