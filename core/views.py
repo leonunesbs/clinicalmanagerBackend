@@ -92,12 +92,21 @@ def testando(request):
 @api_view(['POST'])
 def talk_to_fred(request):
     from chatterbot import ChatBot
+    from chatterbot.trainers import ListTrainer
 
     bot = ChatBot('Fred')
+    conversa = ListTrainer(bot)
+    conversa.train([
+        'Oi',
+        'Olá, em que posso ajudar?',
+        'Qual o seu nome?',
+        'Me chamo Fred, e você?',
+        'Me chamo Leonardo',
+        'É um prazer falar com você, Leonardo. Em que posso ajudar?',
+    ])
+
     pergunta = request.data['Body']
-
     resposta = bot.get_response(pergunta)
-
     if float(resposta.confidence) > 0.5:
         return Response({'Fred': resposta})
     else:
