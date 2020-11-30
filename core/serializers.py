@@ -3,7 +3,9 @@ from core.models import Consulta, Agenda, Paciente, Prontuário, Profissional
 
 
 class PacienteSerializer(serializers.ModelSerializer):
-    data_de_nascimento = serializers.DateField(format='%d/%m/%Y')
+    data_de_nascimento = serializers.DateField(format='%Y-%m-%d')
+    data_de_nascimento_local_format = serializers.DateField(
+        format='%d/%m/%Y', source='data_de_nascimento', read_only=True)
     idade = serializers.CharField(read_only=True)
 
     class Meta:
@@ -25,9 +27,9 @@ class ConsultaSerializer(serializers.ModelSerializer):
 
 
 class ProntuárioSerializer(serializers.ModelSerializer):
-    paciente = serializers.CharField()
+    paciente = serializers.CharField(read_only=True)
     data_de_nascimento = serializers.DateField(
-        source='get_data_de_nascimento')
+        source='get_data_de_nascimento', read_only=True)
 
     class Meta:
         model = Prontuário

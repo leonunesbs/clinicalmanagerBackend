@@ -40,8 +40,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
 
-    'chatterbot.ext.django_chatterbot',
-
     'rest_framework',
     'core'
 ]

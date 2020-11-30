@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.http.response import HttpResponseRedirect
 from django.shortcuts import render
 from rest_framework import viewsets
@@ -6,10 +7,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework.reverse import reverse
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from django.shortcuts import get_object_or_404
 
-from core.models import Consulta, Agenda, Paciente
-from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer
+from core.models import Consulta, Agenda, Paciente, Prontuário
+from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer, ProntuárioSerializer, serializers
 
 
 class PacienteViewSet(viewsets.ModelViewSet):
@@ -21,6 +23,11 @@ class PacienteViewSet(viewsets.ModelViewSet):
 class ConsultaViewSet(viewsets.ModelViewSet):
     queryset = Consulta.objects.all()
     serializer_class = ConsultaSerializer
+
+
+class ProntuárioViewSet(viewsets.ModelViewSet):
+    queryset = Prontuário.objects.all()
+    serializer_class = ProntuárioSerializer
 
 
 class AgendaViewSet(viewsets.ModelViewSet):
@@ -75,6 +82,18 @@ def agendamento(request):
     return Response(serializer.data, status=HTTP_200_OK)
 
 
+@api_view(['POST'])
+def cadastrar_prontuário(request, id):
+    paciente = get_object_or_404(Paciente, id=id)
+    if paciente:
+        prontuario, _ = Prontuário.objects.get_or_create(paciente=paciente)
+        serializer = ProntuárioSerializer(prontuario)
+
+        return Response(serializer.data, status=HTTP_201_CREATED)
+
+    return Response(status=HTTP_404_NOT_FOUND)
+
+
 @api_view(['GET'])
 def iniciar_consulta(request):
     Consulta.objects.get(id=1).iniciar()
@@ -88,27 +107,3 @@ def testando(request):
         paciente.notify(f'Sua consulta foi confirmada.')
         agenda = Agenda.objects.get(prontuário__paciente=paciente)
         agenda.confirmar_agendamento()
-
-
-@api_view(['POST'])
-def talk_to_fred(request):
-    from chatterbot import ChatBot
-    from chatterbot.trainers import ListTrainer
-
-    bot = ChatBot('Fred')
-    conversa = ListTrainer(bot)
-    conversa.train([
-        'Oi',
-        'Olá, em que posso ajudar?',
-        'Qual o seu nome?',
-        'Me chamo Fred, e você?',
-        'Me chamo Leonardo',
-        'É um prazer falar com você, Leonardo. Em que posso ajudar?',
-    ])
-
-    pergunta = request.data['Body']
-    resposta = bot.get_response(pergunta)
-    if float(resposta.confidence) > 0.5:
-        return Response({'Fred': resposta})
-    else:
-        return Response({'Fred': 'Eu não te entendi. :('})
