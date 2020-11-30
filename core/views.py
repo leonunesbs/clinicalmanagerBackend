@@ -10,8 +10,8 @@ from rest_framework.reverse import reverse
 from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
 from django.shortcuts import get_object_or_404
 
-from core.models import Consulta, Agenda, Paciente, Prontuário
-from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer, ProntuárioSerializer, serializers
+from core.models import Consulta, Agenda, Paciente, Profissional, Prontuário
+from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer, ProfissionalSerializer, ProntuárioSerializer, serializers
 
 
 class PacienteViewSet(viewsets.ModelViewSet):
@@ -28,6 +28,11 @@ class ConsultaViewSet(viewsets.ModelViewSet):
 class ProntuárioViewSet(viewsets.ModelViewSet):
     queryset = Prontuário.objects.all()
     serializer_class = ProntuárioSerializer
+
+
+class ProfissionalViewSet(viewsets.ModelViewSet):
+    queryset = Profissional.objects.all()
+    serializer_class = ProfissionalSerializer
 
 
 class AgendaViewSet(viewsets.ModelViewSet):
@@ -99,11 +104,49 @@ def iniciar_consulta(request):
     Consulta.objects.get(id=1).iniciar()
 
 
-@api_view(['POST'])
-def testando(request):
+@api_view(['GET'])
+def listar_agendas(request):
+    agendas = Agenda.objects.all()
 
-    if request.data['Body'].lower() in ['sim', 's', 'yes', 'ok', 'confirmar']:
-        paciente = Paciente.objects.get(nome='LEONARDO NUNES BEZERRA SOUZA')
-        paciente.notify(f'Sua consulta foi confirmada.')
-        agenda = Agenda.objects.get(prontuário__paciente=paciente)
-        agenda.confirmar_agendamento()
+    serializer = AgendaSerializer(agendas, many=True)
+
+    return Response(serializer.data, status=HTTP_200_OK)
+
+
+@api_view(['POST'])
+def nova_agenda(request):
+    profissional = request.data.get('profissional')
+    local_de_atendimento = request.data.get('localDeAtendimento')
+    start = request.data.get('start')
+    end = request.data.get('end')
+
+    if (profissional and start and end):
+        agenda, _ = Agenda.objects.get_or_create(
+            profissional=Profissional.objects.get(pk=1),
+            local_de_atendimento=local_de_atendimento,
+            horário_start=start,
+            horário_end=end
+        )
+        serializer = AgendaSerializer(agenda)
+        return Response(serializer.data, status=HTTP_200_OK)
+
+    else:
+        return Response({'profissional': 'number', 'start': 'Date', 'end': 'Date'}, status=HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def agendar_prontuário(request):
+    agenda_id = request.data.get('agenda')
+    prontuário_id = request.data.get('prontuário')
+
+    if (prontuário_id and agenda_id):
+        agenda = Agenda.objects.get(pk=agenda_id)
+        agenda.prontuário = Prontuário.objects.get(
+            pk=prontuário_id
+        )
+        agenda.save()
+        serializer = AgendaSerializer(agenda)
+        return Response(serializer.data, status=HTTP_200_OK)
+
+    else:
+        return Response({'prontuário': 'number'}, status=HTTP_400_BAD_REQUEST)

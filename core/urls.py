@@ -12,7 +12,9 @@ router.register(r'pacientes', PacienteViewSet)
 router.register(r'consulta', ConsultaViewSet)
 router.register(r'prontuarios', ProntuárioViewSet)
 router.register(r'prontuario', ProntuárioViewSet)
+router.register(r'profissional', ProfissionalViewSet)
 router.register(r'agendas', AgendaViewSet)
+router.register(r'agenda', AgendaViewSet)
 
 app_name = 'core'
 
@@ -23,6 +25,9 @@ urlpatterns = [
 
     path('agendamento/', agendamento, name='agendamento'),
     path('iniciar/', iniciar_consulta, name='iniciar_consulta'),
+    path('listar-agendas/', listar_agendas, name='listar_agendas'),
+    path('nova-agenda/', nova_agenda, name='nova_agenda'),
+    path('agendar-prontuario/', agendar_prontuário, name='agendar_prontuário'),
     path('cadastrar-prontuario/<int:id>/', cadastrar_prontuário,
          name='cadastrar_prontuário'),
 ]

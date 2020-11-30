@@ -1,3 +1,4 @@
+from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
@@ -20,8 +21,9 @@ class Paciente(models.Model):
         from twilio.rest import Client
         import re
 
-        account_sid = 'AC34e352b4d9303e072239451a5de73ad6'
-        auth_token = 'bef3ad4088bdceb71d525121389dda7a'
+        account_sid = settings.TWILIO_ACC_SID
+        auth_token = settings.TWILIO_AUTH_TOKEN
+
         client = Client(account_sid, auth_token)
 
         clean_telefone = re.compile(
@@ -56,9 +58,12 @@ class Profissional(models.Model):
 
 
 class Agenda(models.Model):
+    id = models.AutoField(primary_key=True)
     profissional = models.ForeignKey('Profissional', on_delete=models.CASCADE)
-    local_de_atendimento = models.CharField(max_length=30)
-    horário = models.DateTimeField()
+    local_de_atendimento = models.CharField(
+        max_length=30, blank=True, null=True)
+    horário_start = models.DateTimeField()
+    horário_end = models.DateTimeField()
     is_disponível = models.BooleanField(default=True)
     prontuário = models.ForeignKey(
         'Prontuário', blank=True, null=True, on_delete=models.CASCADE)
@@ -68,24 +73,24 @@ class Agenda(models.Model):
     auto_notified = models.BooleanField(default=False, editable=False)
 
     class Meta:
-        ordering = ['-horário']
+        ordering = ['-horário_start']
 
     def __str__(self):
         if self.is_disponível:
             disp = 'ON'
         else:
             disp = 'OFF'
-        return f'{disp} {self.profissional} [{self.horário.strftime("%d/%m/%Y às %Hh%M")}]'
+        return f'{disp} {self.profissional} [{self.horário_start.strftime("%d/%m/%Y às %Hh%M")}]'
 
     def notify_consulta_marcada(self):
         def get_horário_display():
             today = timezone.now()
-            if self.horário.day == today.day:
-                return f'HOJE, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
-            if self.horário.day == today.day + 1:
-                return f'AMANHÃ, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
-
-            return f'{self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+            start = self.horário_start - timedelta(hours=3)
+            if start.day == today.day:
+                return f'HOJE, {start.strftime("%d/%m/%Y às %Hh%M")}'
+            if start.day == today.day + 1:
+                return f'AMANHÃ, {start.strftime("%d/%m/%Y às %Hh%M")}'
+            return f'{start.strftime("%d/%m/%Y às %Hh%M")}'
 
         self.prontuário.paciente.notify(
             f'Olá {self.prontuário.paciente.nome.split()[0]}!\nSua consulta está marcada para {get_horário_display()} - {self.local_de_atendimento}.')
@@ -93,12 +98,12 @@ class Agenda(models.Model):
     def solicitar_confirmação(self):
         def get_horário_display():
             today = timezone.now()
-            if self.horário.day == today.day:
-                return f'HOJE, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
-            if self.horário.day == today.day + 1:
-                return f'AMANHÃ, {self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+            if self.horário_start.day == today.day:
+                return f'HOJE, {self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
+            if self.horário_start.day == today.day + 1:
+                return f'AMANHÃ, {self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
 
-            return f'{self.horário.strftime("%d/%m/%Y às %Hh%M")}'
+            return f'{self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
 
         if self.prontuário:
             self.prontuário.paciente.notify(
@@ -132,11 +137,10 @@ class Agenda(models.Model):
         if self.confirmado:
             self.data_agendamento = timezone.now()
 
-        super().save(*args, **kwargs)
-
         if self.is_disponível:
             self.prontuário = None
-            super().save(*args, **kwargs)
+
+        super().save(*args, **kwargs)
 
     def adicionar(profissional, horário):
         agenda, _ = Agenda.objects.get_or_create(

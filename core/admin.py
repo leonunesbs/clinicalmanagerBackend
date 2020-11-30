@@ -40,7 +40,8 @@ class AgendaAdmin(admin.ModelAdmin):
     cancelar_agendamentos.short_description = "Cancelar agendamentos selecionados"
     list_display = [
         'profissional',
-        'horário',
+        'horário_start',
+        'horário_end',
         'is_disponível',
         'hora_confirmação',
         'confirmado',

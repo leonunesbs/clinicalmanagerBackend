@@ -27,7 +27,8 @@ class ConsultaSerializer(serializers.ModelSerializer):
 
 
 class ProntuárioSerializer(serializers.ModelSerializer):
-    paciente = serializers.CharField(read_only=True)
+    id = serializers.IntegerField(read_only=True)
+    paciente = PacienteSerializer()
     data_de_nascimento = serializers.DateField(
         source='get_data_de_nascimento', read_only=True)
 
@@ -37,6 +38,11 @@ class ProntuárioSerializer(serializers.ModelSerializer):
 
 
 class AgendaSerializer(serializers.ModelSerializer):
+    horário = serializers.DateTimeField(source='horário_start', read_only=True)
+    start = serializers.DateTimeField(source='horário_start', read_only=True)
+    end = serializers.DateTimeField(source='horário_end', read_only=True)
+    title = serializers.CharField(source='prontuário', read_only=True)
+
     profissional = ProfissionalSerializer()
     prontuário = ProntuárioSerializer()
 
