@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser
 from rest_framework.reverse import reverse
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 from django.shortcuts import get_object_or_404
 
 from core.models import Consulta, Agenda, Paciente, Profissional, Prontuário
@@ -141,12 +141,34 @@ def agendar_prontuário(request):
 
     if (prontuário_id and agenda_id):
         agenda = Agenda.objects.get(pk=agenda_id)
-        agenda.prontuário = Prontuário.objects.get(
+        agenda.agendar(Prontuário.objects.get(
             pk=prontuário_id
-        )
+        ))
         agenda.save()
         serializer = AgendaSerializer(agenda)
         return Response(serializer.data, status=HTTP_200_OK)
 
     else:
         return Response({'prontuário': 'number'}, status=HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH'])
+def alterar_agenda(request, id):
+    prontuário_id = request.data.get('prontuário')
+    agenda = Agenda.objects.get(pk=id)
+    agenda.agendar(Prontuário.objects.get(
+        pk=prontuário_id
+    ))
+    agenda.save()
+    serializer = AgendaSerializer(agenda)
+    return Response(serializer.data, status=HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+def desmarcar_agenda(request, id):
+    agenda = Agenda.objects.get(pk=id)
+    agenda.cancelar_agendamento()
+    agendas = Agenda.objects.all()
+
+    serializer = AgendaSerializer(agendas, many=True)
+    return Response(serializer.data, status=HTTP_200_OK)

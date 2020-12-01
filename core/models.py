@@ -142,12 +142,9 @@ class Agenda(models.Model):
 
         super().save(*args, **kwargs)
 
-    def adicionar(profissional, horário):
-        agenda, _ = Agenda.objects.get_or_create(
-            profissional=profissional,
-            horário=horário
-        )
-        return agenda
+    def agendar(self, prontuário):
+        self.prontuário = prontuário
+        return self.save()
 
     def agendar(self, prontuário):
         self.prontuário = prontuário
