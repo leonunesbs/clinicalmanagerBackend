@@ -172,3 +172,14 @@ def desmarcar_agenda(request, id):
 
     serializer = AgendaSerializer(agendas, many=True)
     return Response(serializer.data, status=HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+def remover_agenda(request, id):
+    agenda = Agenda.objects.get(pk=id)
+    agenda.cancelar_agendamento()
+    agenda.delete()
+    agendas = Agenda.objects.all()
+
+    serializer = AgendaSerializer(agendas, many=True)
+    return Response(serializer.data, status=HTTP_200_OK)

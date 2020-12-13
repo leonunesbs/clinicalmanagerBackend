@@ -29,6 +29,7 @@ urlpatterns = [
     path('nova-agenda/', nova_agenda, name='nova_agenda'),
     path('alterar-agenda/<int:id>/', alterar_agenda, name='alterar_agenda'),
     path('desmarcar-agenda/<int:id>/', desmarcar_agenda, name='desmarcar_agenda'),
+    path('remover-agenda/<int:id>/', remover_agenda, name='remover_agenda'),
     path('agendar-prontuario/', agendar_prontuário, name='agendar_prontuário'),
     path('cadastrar-prontuario/<int:id>/', cadastrar_prontuário,
          name='cadastrar_prontuário'),

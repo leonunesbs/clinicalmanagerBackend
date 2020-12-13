@@ -2,6 +2,9 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from rest_framework import response
+from rest_framework.response import Response
+from rest_framework.status import HTTP_400_BAD_REQUEST
 
 
 class Paciente(models.Model):
@@ -21,21 +24,24 @@ class Paciente(models.Model):
         from twilio.rest import Client
         import re
 
-        account_sid = settings.TWILIO_ACC_SID
-        auth_token = settings.TWILIO_AUTH_TOKEN
+        try:
+            account_sid = settings.TWILIO_ACC_SID
+            auth_token = settings.TWILIO_AUTH_TOKEN
 
-        client = Client(account_sid, auth_token)
+            client = Client(account_sid, auth_token)
 
-        clean_telefone = re.compile(
-            r'[^\d.]+').sub('', self.telefone)
+            clean_telefone = re.compile(
+                r'[^\d.]+').sub('', self.telefone)
 
-        clean_telefone = clean_telefone.replace(clean_telefone[2], '')
+            clean_telefone = clean_telefone.replace(clean_telefone[2], '')
 
-        client.messages.create(
-            from_='whatsapp:+14155238886',
-            body=msg,
-            to=f'whatsapp:+55{clean_telefone}'
-        )
+            client.messages.create(
+                from_='whatsapp:+14155238886',
+                body=msg,
+                to=f'whatsapp:+55{clean_telefone}'
+            )
+        except:
+            return Response(status=HTTP_400_BAD_REQUEST)
 
     def __str__(self):
         return self.nome
