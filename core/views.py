@@ -1,185 +1,101 @@
-from django.conf import settings
-from django.http.response import HttpResponseRedirect
+from django.contrib.auth.models import User
 from django.shortcuts import render
-from rest_framework import viewsets
-from rest_framework.views import APIView
+from django.contrib.auth import authenticate
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework.permissions import IsAdminUser
-from rest_framework.reverse import reverse
-from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
-from core.models import Consulta, Agenda, Paciente, Profissional, Prontuário
-from core.serializers import ConsultaSerializer, PacienteSerializer, AgendaSerializer, ProfissionalSerializer, ProntuárioSerializer, serializers
+from rest_framework.response import Response
+from rest_framework.authtoken.models import Token
+from rest_framework.status import HTTP_200_OK, HTTP_201_CREATED, HTTP_400_BAD_REQUEST, HTTP_401_UNAUTHORIZED, HTTP_404_NOT_FOUND, HTTP_204_NO_CONTENT
 
-
-class PacienteViewSet(viewsets.ModelViewSet):
-    queryset = Paciente.objects.all()
-    serializer_class = PacienteSerializer
-    # permission_classes = IsAdminUser
-
-
-class ConsultaViewSet(viewsets.ModelViewSet):
-    queryset = Consulta.objects.all()
-    serializer_class = ConsultaSerializer
-
-
-class ProntuárioViewSet(viewsets.ModelViewSet):
-    queryset = Prontuário.objects.all()
-    serializer_class = ProntuárioSerializer
-
-
-class ProfissionalViewSet(viewsets.ModelViewSet):
-    queryset = Profissional.objects.all()
-    serializer_class = ProfissionalSerializer
-
-
-class AgendaViewSet(viewsets.ModelViewSet):
-    queryset = Agenda.objects.all()
-    serializer_class = AgendaSerializer
+from .models import Colaborador, Consulta, Unidade, Prontuário
+from .serializers import ConsultaSerializer, UnidadeSerializer, ProntuárioSerializier, ProntuárioDetalhadoSerializier
 
 
 @api_view(['POST'])
-@permission_classes([])
-def agendamento(request):
-    data = {}
-    try:
-        data = {
-            'disponibilidade': request.data['disponibilidade'],
-            'paciente': request.data['paciente']
-        }
-    except KeyError as e:
-        data = {
-            'detail': f'Missing field: {e}'
-        }
-        return Response(data, status=HTTP_400_BAD_REQUEST)
+def autenticar(request, format=None):
+    usuário = request.data['usuário']
+    senha = request.data['senha']
 
-    for d in data.items():
-        key = d[0]
-        value = d[1]
-        if not value:
-            data[key] = "Este campo é obrigatório."
+    if usuário and senha:
+        user = authenticate(username=usuário, password=senha)
 
-    try:
-        disponibilidade = Agenda.objects.get(
-            pk=data['disponibilidade'])
-        paciente = Paciente.objects.get(
-            pk=data['paciente'])
-
-        consulta = ''
-        created = ''
-        if request.method == 'POST':
-            consulta, created = Consulta.agendar(
-                disp=disponibilidade, pct=paciente)
-        elif request.method == 'GET':
-            consulta = Consulta.objects.get(
-                disponibilidade=disponibilidade, paciente=paciente)
-
-        serializer = ConsultaSerializer(consulta)
-    except Exception as e:
-        data = {
-            'detail': f'{e}'
-        }
-        return Response(data, status=HTTP_400_BAD_REQUEST)
-    if created:
-        return Response(serializer.data, status=HTTP_201_CREATED)
-    return Response(serializer.data, status=HTTP_200_OK)
-
-
-@api_view(['POST'])
-def cadastrar_prontuário(request, id):
-    paciente = get_object_or_404(Paciente, id=id)
-    if paciente:
-        prontuario, _ = Prontuário.objects.get_or_create(paciente=paciente)
-        serializer = ProntuárioSerializer(prontuario)
-
-        return Response(serializer.data, status=HTTP_201_CREATED)
-
-    return Response(status=HTTP_404_NOT_FOUND)
+        if user is not None:
+            token, _ = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key
+            }, status=HTTP_200_OK)
+        else:
+            return Response(status=HTTP_404_NOT_FOUND)
+    else:
+        return Response({
+            usuário: 'Este campo é obrigatório.',
+            senha: 'Este campo é obrigatório.'
+        }, status=HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
-def iniciar_consulta(request):
-    Consulta.objects.get(id=1).iniciar()
+@permission_classes([IsAuthenticated])
+def unidades_colaborador(request, format=None):
+    unidades = Unidade.objects.all()
 
+    unidades_return = []
+    for unidade in unidades:
+        for colaborador in unidade.colaboradores.all():
+            if colaborador.user == request.user:
+                unidades_return.append(unidade)
 
-@api_view(['GET'])
-def listar_agendas(request):
-    agendas = Agenda.objects.all()
-
-    serializer = AgendaSerializer(agendas, many=True)
+    serializer = UnidadeSerializer(unidades_return, many=True)
 
     return Response(serializer.data, status=HTTP_200_OK)
 
 
-@api_view(['POST'])
-def nova_agenda(request):
-    profissional = request.data.get('profissional')
-    local_de_atendimento = request.data.get('localDeAtendimento')
-    start = request.data.get('start')
-    end = request.data.get('end')
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def prontuários(request, unidadeId, format=None):
+    unidade = get_object_or_404(Unidade, pk=unidadeId)
 
-    if (profissional and start and end):
-        agenda, _ = Agenda.objects.get_or_create(
-            profissional=Profissional.objects.get(pk=1),
-            local_de_atendimento=local_de_atendimento,
-            horário_start=start,
-            horário_end=end
+    if unidade.verificar_vínculo(request.user):
+        prontuários = Prontuário.objects.all()
+        serializer = ProntuárioSerializier(prontuários, many=True)
+
+        return Response(serializer.data, status=HTTP_200_OK)
+    else:
+        return Response(status=HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def prontuário(request, unidadeId, prontuárioId, format=None):
+    unidade = get_object_or_404(Unidade, pk=unidadeId)
+
+    if unidade.verificar_vínculo(request.user):
+        prontuário = get_object_or_404(Prontuário, pk=prontuárioId)
+        serializer = ProntuárioDetalhadoSerializier(prontuário)
+
+        return Response(serializer.data, status=HTTP_200_OK)
+    else:
+        return Response(status=HTTP_401_UNAUTHORIZED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def nova_consulta(request, unidadeId, prontuárioId, format=None):
+    unidade = get_object_or_404(Unidade, pk=unidadeId)
+    dados_clínicos = request.data['dados_clínicos']
+
+    if unidade.verificar_vínculo(request.user):
+        prontuário = get_object_or_404(Prontuário, pk=prontuárioId)
+        consulta = Consulta.objects.create(
+            prontuário=prontuário,
+            responsável=Colaborador.objects.get(user=request.user),
+            setor=prontuário.setor_atual,
+            célula=prontuário.célula_atual,
+            dados_clínicos=dados_clínicos
         )
-        serializer = AgendaSerializer(agenda)
-        return Response(serializer.data, status=HTTP_200_OK)
+        serializer = ConsultaSerializer(consulta)
+        return Response(serializer.data, status=HTTP_201_CREATED)
 
     else:
-        return Response({'profissional': 'number', 'start': 'Date', 'end': 'Date'}, status=HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-def agendar_prontuário(request):
-    agenda_id = request.data.get('agenda')
-    prontuário_id = request.data.get('prontuário')
-
-    if (prontuário_id and agenda_id):
-        agenda = Agenda.objects.get(pk=agenda_id)
-        agenda.agendar(Prontuário.objects.get(
-            pk=prontuário_id
-        ))
-        agenda.save()
-        serializer = AgendaSerializer(agenda)
-        return Response(serializer.data, status=HTTP_200_OK)
-
-    else:
-        return Response({'prontuário': 'number'}, status=HTTP_400_BAD_REQUEST)
-
-
-@api_view(['PATCH'])
-def alterar_agenda(request, id):
-    prontuário_id = request.data.get('prontuário')
-    agenda = Agenda.objects.get(pk=id)
-    agenda.agendar(Prontuário.objects.get(
-        pk=prontuário_id
-    ))
-    agenda.save()
-    serializer = AgendaSerializer(agenda)
-    return Response(serializer.data, status=HTTP_200_OK)
-
-
-@api_view(['DELETE'])
-def desmarcar_agenda(request, id):
-    agenda = Agenda.objects.get(pk=id)
-    agenda.cancelar_agendamento()
-    agendas = Agenda.objects.all()
-
-    serializer = AgendaSerializer(agendas, many=True)
-    return Response(serializer.data, status=HTTP_200_OK)
-
-
-@api_view(['DELETE'])
-def remover_agenda(request, id):
-    agenda = Agenda.objects.get(pk=id)
-    agenda.cancelar_agendamento()
-    agenda.delete()
-    agendas = Agenda.objects.all()
-
-    serializer = AgendaSerializer(agendas, many=True)
-    return Response(serializer.data, status=HTTP_200_OK)
+        return Response(status=HTTP_401_UNAUTHORIZED)

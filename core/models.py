@@ -1,209 +1,123 @@
-from datetime import timedelta
 from django.db import models
+from django.contrib.auth.models import User
 from django.utils import timezone
-from django.conf import settings
-from rest_framework import response
-from rest_framework.response import Response
-from rest_framework.status import HTTP_400_BAD_REQUEST
+
+# Create your models here.
+
+
+class Colaborador(models.Model):
+    user = models.OneToOneField(
+        User, on_delete=models.CASCADE, related_name='user')
+    nome = models.CharField(max_length=25, blank=True, null=True)
+    função = models.CharField(max_length=25, blank=True, null=True)
+    registro = models.CharField(max_length=25, blank=True, null=True)
+
+    class Meta:
+        verbose_name_plural = 'colaboradores'
+
+    def __str__(self) -> str:
+        return self.nome
+
+
+class Unidade(models.Model):
+    nome = models.CharField(max_length=50)
+    colaboradores = models.ManyToManyField('Colaborador', blank=True)
+
+    def __str__(self) -> str:
+        return self.nome
+
+    def verificar_vínculo(self, user: models.Model):
+        for colaborador in self.colaboradores.all():
+            if colaborador.user == user:
+                return True
+        return False
+
+
+class Setor(models.Model):
+    unidade = models.ForeignKey('Unidade', on_delete=models.CASCADE)
+    nome = models.CharField(max_length=15)
+
+    class Meta:
+        verbose_name_plural = 'setores'
+
+    def __str__(self) -> str:
+        return self.nome
+
+
+class Célula(models.Model):
+    setor = models.ForeignKey('Setor', on_delete=models.CASCADE)
+    nome = models.CharField(max_length=15)
+    prontuário = models.ForeignKey(
+        'Prontuário', on_delete=models.SET_NULL, blank=True, null=True, related_name='prontuário')
 
 
 class Paciente(models.Model):
-    nome = models.CharField(max_length=125)
-    data_de_nascimento = models.DateField()
-    cpf = models.CharField(max_length=15)
-    rg = models.CharField(max_length=20)
-    telefone = models.CharField(max_length=15)
+    nome = models.CharField(max_length=50)
 
-    class Meta:
-        ordering = ['nome']
-
-    def idade(self):
-        return ((timezone.now().date() - self.data_de_nascimento).days//366)
-
-    def notify(self, msg):
-        from twilio.rest import Client
-        import re
-
-        try:
-            account_sid = settings.TWILIO_ACC_SID
-            auth_token = settings.TWILIO_AUTH_TOKEN
-
-            client = Client(account_sid, auth_token)
-
-            clean_telefone = re.compile(
-                r'[^\d.]+').sub('', self.telefone)
-
-            clean_telefone = clean_telefone.replace(clean_telefone[2], '')
-
-            client.messages.create(
-                from_='whatsapp:+14155238886',
-                body=msg,
-                to=f'whatsapp:+55{clean_telefone}'
-            )
-        except:
-            return Response(status=HTTP_400_BAD_REQUEST)
-
-    def __str__(self):
-        return self.nome
-
-    def save(self, *args, **kwargs):
-        self.nome = self.nome.upper()
-        return super().save(*args, **kwargs)
-
-
-class Profissional(models.Model):
-    nome = models.CharField(max_length=125)
-    especialidade = models.CharField(max_length=30)
-    registro = models.CharField(max_length=20)
-
-    class Meta:
-        verbose_name_plural = 'profissionais'
-
-    def __str__(self):
+    def __str__(self) -> str:
         return self.nome
 
 
-class Agenda(models.Model):
-    id = models.AutoField(primary_key=True)
-    profissional = models.ForeignKey('Profissional', on_delete=models.CASCADE)
-    local_de_atendimento = models.CharField(
-        max_length=30, blank=True, null=True)
-    horário_start = models.DateTimeField()
-    horário_end = models.DateTimeField()
-    is_disponível = models.BooleanField(default=True)
-    prontuário = models.ForeignKey(
-        'Prontuário', blank=True, null=True, on_delete=models.CASCADE)
-    hora_confirmação = models.DateTimeField(editable=False, null=True)
-    confirmado = models.BooleanField(default=False)
-
-    auto_notified = models.BooleanField(default=False, editable=False)
+class Anexo(models.Model):
+    prontuário = models.ForeignKey('Prontuário', on_delete=models.CASCADE)
 
     class Meta:
-        ordering = ['-horário_start']
+        abstract = True
 
-    def __str__(self):
-        if self.is_disponível:
-            disp = 'ON'
-        else:
-            disp = 'OFF'
-        return f'{disp} {self.profissional} [{self.horário_start.strftime("%d/%m/%Y às %Hh%M")}]'
 
-    def notify_consulta_marcada(self):
-        def get_horário_display():
-            today = timezone.now()
-            start = self.horário_start - timedelta(hours=3)
-            if start.day == today.day:
-                return f'HOJE, {start.strftime("%d/%m/%Y às %Hh%M")}'
-            if start.day == today.day + 1:
-                return f'AMANHÃ, {start.strftime("%d/%m/%Y às %Hh%M")}'
-            return f'{start.strftime("%d/%m/%Y às %Hh%M")}'
+class Consulta(Anexo):
+    responsável = models.ForeignKey(
+        'Colaborador', on_delete=models.SET_NULL, blank=True, null=True)
+    setor = models.ForeignKey('Setor', on_delete=models.SET_NULL,
+                              blank=True, null=True)
+    célula = models.ForeignKey(
+        'Célula', on_delete=models.SET_NULL, blank=True, null=True)
+    data_hora = models.DateTimeField(default=timezone.now)
+    dados_clínicos = models.TextField()
 
-        self.prontuário.paciente.notify(
-            f'Olá {self.prontuário.paciente.nome.split()[0]}!\nSua consulta está marcada para {get_horário_display()} - {self.local_de_atendimento}.')
-
-    def solicitar_confirmação(self):
-        def get_horário_display():
-            today = timezone.now()
-            if self.horário_start.day == today.day:
-                return f'HOJE, {self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
-            if self.horário_start.day == today.day + 1:
-                return f'AMANHÃ, {self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
-
-            return f'{self.horário_start.strftime("%d/%m/%Y às %Hh%M")}'
-
-        if self.prontuário:
-            self.prontuário.paciente.notify(
-                f'Olá {self.prontuário.paciente.nome.split()[0]}!\nVocê deseja CONFIRMAR a sua consulta que está marcada para {get_horário_display()} - {self.local_de_atendimento}?')
-
-        return 'ok'
-
-    def confirmar_agendamento(self):
-        self.confirmado = True
-        self.hora_confirmação = timezone.now()
-        self.save()
-
-    def cancelar_agendamento(self):
-        self.prontuário = None
-        self.is_disponível = True
-        self.confirmado = False
-        self.auto_notified = False
-        self.save()
-
-    def auto_notify(self):
-        if not self.auto_notified:
-            self.notify_consulta_marcada()
-            self.auto_notified = True
-            self.save()
-
-    def save(self, *args, **kwargs):
-        if self.prontuário:
-            self.is_disponível = False
-            self.auto_notify()
-
-        if self.confirmado:
-            self.data_agendamento = timezone.now()
-
-        if self.is_disponível:
-            self.prontuário = None
-
-        super().save(*args, **kwargs)
-
-    def agendar(self, prontuário):
-        self.prontuário = prontuário
-        return self.save()
-
-    def agendar(self, prontuário):
-        self.prontuário = prontuário
-        return self.save()
+    class Meta:
+        ordering = ['-data_hora']
 
 
 class Prontuário(models.Model):
-    paciente = models.OneToOneField('Paciente', on_delete=models.CASCADE)
+    unidade = models.ForeignKey('Unidade', on_delete=models.CASCADE)
+    paciente = models.ForeignKey(
+        'Paciente', on_delete=models.SET_NULL, blank=True, null=True)
+    setor_atual = models.ForeignKey(
+        'Setor', on_delete=models.SET_NULL, blank=True, null=True, related_name='setor_atual')
+    célula_atual = models.ForeignKey(
+        'Célula', on_delete=models.SET_NULL, blank=True, null=True, related_name='célula_atual')
 
-    def __str__(self):
-        return self.paciente.nome
-
-    def get_data_de_nascimento(self):
-        return self.paciente.data_de_nascimento
+    def histórico_clínico(self):
+        consultas = Consulta.objects.filter(prontuário=self.pk)
+        return consultas
 
 
-class Consulta(models.Model):
-    prontuário = models.ForeignKey('Prontuário', on_delete=models.CASCADE)
-    profissional = models.ForeignKey(
-        'Profissional', on_delete=models.SET_NULL, null=True)
+class ExameProcedimento(Anexo):
+    solicitante = models.ForeignKey(
+        'Colaborador', on_delete=models.SET_NULL, blank=True, null=True, related_name='solicitante')
+    nome = models.CharField(max_length=30)
 
-    caso_clínico = models.TextField(editable=False)
+    responsável = models.ForeignKey(
+        'Colaborador', on_delete=models.SET_NULL, blank=True, null=True, related_name='responsável')
+    resultado = models.TextField(blank=True, null=True)
 
-    observações = models.TextField(blank=True)
+    status = models.CharField(default='SOLICITADO', max_length=20)
+    último_status = models.DateTimeField(default=timezone.now)
 
-    início = models.DateTimeField(default=timezone.now)
-    fim = models.DateTimeField()
+    data_solicitado = models.DateTimeField(default=timezone.now)
+    data_resultado = models.DateTimeField(blank=True, null=True)
 
-    def duração_consulta(self):
-        if (self.início and self.fim):
-            return f'{(self.fim - self.início).seconds // 60}min{(self.fim - self.início).seconds % 60}s'
-        else:
-            return False
+    class Meta:
+        verbose_name = 'exame/procedimento'
+        verbose_name_plural = 'exames/procedimentos'
 
-    def has_observações(self):
-        if self.observações:
-            return True
-        else:
-            return False
 
-    def iniciar(self):
-        self.início = timezone.now()
-        return self.save()
+class Prescrição(Anexo):
+    prescritor = models.ForeignKey(
+        'Colaborador', blank=True, null=True, on_delete=models.SET_NULL, related_name='prescritor')
+    data_prescrição = models.DateField()
+    prescrição = models.TextField()
 
-    def finalizar(self):
-        self.fim = timezone.now()
-        return self.save(), self.duração_consulta()
-
-    def get_paciente(self):
-        return self.prontuário.paciente
-
-    def __str__(self):
-        return self.prontuário.paciente.nome
-
-    has_observações.boolean = True
-    get_paciente.short_description = 'paciente'
+    class Meta:
+        verbose_name_plural = 'prescrições'

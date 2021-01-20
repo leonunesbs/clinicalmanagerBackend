@@ -7,14 +7,8 @@ from core.views import *
 
 # Routers provide an easy way of automatically determining the URL conf.
 router = routers.DefaultRouter()
-router.register(r'paciente', PacienteViewSet)
-router.register(r'pacientes', PacienteViewSet)
-router.register(r'consulta', ConsultaViewSet)
-router.register(r'prontuarios', ProntuárioViewSet)
-router.register(r'prontuario', ProntuárioViewSet)
-router.register(r'profissional', ProfissionalViewSet)
-router.register(r'agendas', AgendaViewSet)
-router.register(r'agenda', AgendaViewSet)
+# router.register(r'paciente', PacienteViewSet)
+
 
 app_name = 'core'
 
@@ -23,14 +17,13 @@ urlpatterns = [
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 
 
-    path('agendamento/', agendamento, name='agendamento'),
-    path('iniciar/', iniciar_consulta, name='iniciar_consulta'),
-    path('listar-agendas/', listar_agendas, name='listar_agendas'),
-    path('nova-agenda/', nova_agenda, name='nova_agenda'),
-    path('alterar-agenda/<int:id>/', alterar_agenda, name='alterar_agenda'),
-    path('desmarcar-agenda/<int:id>/', desmarcar_agenda, name='desmarcar_agenda'),
-    path('remover-agenda/<int:id>/', remover_agenda, name='remover_agenda'),
-    path('agendar-prontuario/', agendar_prontuário, name='agendar_prontuário'),
-    path('cadastrar-prontuario/<int:id>/', cadastrar_prontuário,
-         name='cadastrar_prontuário'),
+    path('autenticar/', autenticar, name='autenticar'),
+    path('unidades_colaborador/', unidades_colaborador,
+         name='unidades_colaborador'),
+    path('prontuarios/<int:unidadeId>/', prontuários, name='prontuários'),
+    path('prontuario/<int:unidadeId>/<int:prontuárioId>/',
+         prontuário, name='prontuário'),
+    path('nova_consulta/<int:unidadeId>/<int:prontuárioId>/',
+         nova_consulta, name='nova_consulta'),
+
 ]
